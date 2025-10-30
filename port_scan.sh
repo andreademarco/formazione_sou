@@ -23,13 +23,18 @@ fi
 
 #################################################################   # Check indirizzo IP 
 
-rx='([01]?[0-9][0-9]?|2[0-4][0-9]|25[0-5])'    # da 0 a 255 
-   if [[ $ip =~ ^$rx\.$rx\.$rx\.$rx$ ]]; then
-      echo "Indirizzo ipv4 valido:     "$ip
-   else
+   #rx='([01]?[0-9][0-9]?|2[0-4][0-9]|25[0-5])'    # All'inizio ho scritto così sbagliando:
+                                                   # gli zeri davanti sarebbero inclusi 
+   #if [[ $ip =~ ^$rx\.$rx\.$rx\.$rx$ ]]; then
+   
+oct="(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])" 
+if [[ $ip =~ ^$oct\.$oct\.$oct\.$oct$ ]]; then
+     echo "Indirizzo ipv4 valido:     "$ip
+  
+else
       echo "Indirizzo ipv4 non valido! "$ip
       exit 1
-   fi
+fi
 
 #################################################################   # Check porte numeriche
 re='^[0-9]+$'
