@@ -28,8 +28,8 @@ pipeline {
                     def namespace = 'formazione-sou'
                     
                     
-                    sh "${minikubeCommand} ${kubectlCommand} config set-context minikube"
-                    sh "${minikubeCommand} update-context" // Per essere sicuri
+                    sh "${minikubeCommand} kubectl config set-context minikube"
+                
                     
                     // 1. Creare il namespace 
                     sh "${kubectlCommand} create namespace ${namespace} --dry-run=client -o yaml | ${kubectlCommand} apply -f -"
