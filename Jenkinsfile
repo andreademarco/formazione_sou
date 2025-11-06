@@ -26,6 +26,12 @@ pipeline {
                     def namespace = 'formazione-sou'
                     
                     
+                    sh 'minikube kubectl config set-context minikube'
+                    sh 'minikube update-context' // Per essere sicuri
+                    
+                    // 1. Creare il namespace 
+                    sh "kubectl create namespace ${namespace} --dry-run=client -o yaml | kubectl apply -f -"
+
                     // 2. Eseguire l'installazione Helm
                     // Uso 'upgrade --install' per creare o aggiornare la release
                     sh "${helmCommand} upgrade --install ${releaseName} ${chartPath} --namespace ${namespace} --set image.tag=latest"
