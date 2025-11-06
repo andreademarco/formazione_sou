@@ -34,6 +34,10 @@ pipeline {
                     // 1. Creare il namespace 
                     sh "${kubectlCommand} create namespace ${namespace} --dry-run=client -o yaml | ${kubectlCommand} apply -f -"
 
+
+                    sh 'ls -R' // check per vedere cosa è stato clonato
+
+
                     // 2. Eseguire l'installazione Helm
                     // Uso 'upgrade --install' per creare o aggiornare la release
                     sh "${helmCommand} upgrade --install ${releaseName} ${chartPath} --namespace ${namespace} --set image.tag=latest"
