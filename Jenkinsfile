@@ -22,6 +22,7 @@ pipeline {
                     // Definisco il percorso del Chart appena scaricato
                     def chartPath = 'formazione_sou_k8s/formazione_sou_k8s' // Modifica il percorso se la cartella del Chart è diversa
                     def helmCommand = '/usr/local/bin/helm'
+                    def minikubeCommand = '/usr/local/bin/minikube'
                     def releaseName = 'flask-app-release'
                     def namespace = 'formazione-sou'
                     
