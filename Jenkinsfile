@@ -20,7 +20,7 @@ pipeline {
             steps {
                 script {
                     // Definisco il percorso del Chart appena scaricato
-                    def chartPath = 'formazione_sou_k8s/flask-app-chart' 
+                    def chartPath = 'flask-app-chart' 
                     def helmCommand = '/usr/local/bin/helm'
                     def minikubeCommand = '/usr/local/bin/minikube'
                     def kubectlCommand = '/usr/local/bin/kubectl'
