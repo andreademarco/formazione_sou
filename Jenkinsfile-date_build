@@ -8,6 +8,7 @@ pipeline {
     stages {
         stage('Build') {
             steps {
+                script{
                     def today = LocalDate.now()
                     def todayday = today.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ITALIAN).toLowerCase()
                     echo "Oggi è ${todayday}"
@@ -29,7 +30,9 @@ pipeline {
                         
                         return
                     }
+                } 
             }
+
         }
     }
 }
