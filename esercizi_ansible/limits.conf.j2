@@ -1,0 +1,8 @@
+# Impostazione dinamica del limite massimo di file aperti (nofile)
+{% if environment == 'production' %}
+* hard nofile 10000
+* soft nofile 10000
+{% elif environment == 'development' or environment == 'collaude' %}
+* hard nofile 1000
+* soft nofile 1000
+{% endif %}
