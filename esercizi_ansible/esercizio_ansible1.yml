@@ -9,6 +9,11 @@
     temp_output_file: /tmp/limits_output.txt   #temporaneo
 
   tasks: 
+      - name: Installo pacchetti di sistema
+        ansible.builtin.dnf:
+          name: systemd
+          state: present
+          
       - name: Prendo da template il numero di file max
         ansible.builtin.template:
           src: limits.conf.j2
