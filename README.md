@@ -37,7 +37,7 @@
 [**Esercizi Ansible**]:
 - il playbook _deploy.yml_ che utilizza le REST API di Jenkins per automatizzare e creare un agent node;
 - il playbook _esercizio_ansible1.yml_ che attinge al template _limits.conf.j2_ per configurare il numero massimo di file nei vari ambienti;
-- il playbook _esercizio_ansible2.yml_ che attinge al template _access_whitelist.j2_ per gestire gli utenti autorizzati ad accedere al sitema tramite PAM 
+- il playbook _esercizio_ansible1.2.yml_ che attinge al template _access_whitelist.j2_ per gestire gli utenti autorizzati ad accedere al sitema tramite PAM 
 
 [**Esercizi Jenkins**]:
 - lo script _jenkins_agent_rest_api.sh_ che utilizza le REST API di Jenkins per automatizzare e creare un agent node;
