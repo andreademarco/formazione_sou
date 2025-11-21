@@ -1,9 +1,6 @@
-# <u>formazione_sou</u>  
-![Rosso](https://placehold.co/15x15/f03c15/f03c15.png) `#f03c15`  
-![Viola](https://placehold.co/15x15/800080/800080.png) `#800080`  
-![Blu](https://placehold.co/15x15/1589F0/1589F0.png) `#1589F0`
+# ![Rosso](https://placehold.co/15x15/f03c15/f03c15.png) formazione_sou
+### ![Viola](https://placehold.co/15x15/800080/800080.png) Andrea De Marco - Academy #5 DevOps
 
-### Andrea De Marco - Academy #5 DevOps
 --- 
 
 ### Struttura della repo:
