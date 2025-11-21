@@ -1,40 +1,22 @@
 ---
-- name: Configurazione whitelist utenti con creazione utenti
+- name: Gestione pacchetti con dizionario
   hosts: all
   become: yes
-  
+
   vars:
-    utenti_autorizzati:
-      - alice
-      - paolo
-      - totti
-  
-  tasks:
-    - name: Installo pacchetti necessari per PAM (Pluggable Authentication Modules)
-      ansible.builtin.dnf:
-        name:
-          - pam
-          - util-linux-user
+    pacchetti:
+      systemd:
         state: present
-    
-    - name: Creo gli utenti autorizzati nel sistema
-      ansible.builtin.user:
-        name: "{{ item }}"
+      python3:
         state: present
-        shell: /bin/bash
-        create_home: yes
-      loop: "{{ utenti_autorizzati }}"
-    
-    - name: Genero whitelist da template
-      ansible.builtin.template:
-        src: access_whitelist.j2
-        dest: /tmp/access_whitelist.txt
-      delegate_to: localhost
-    
-    - name: Inserisco whitelist prima dell'esclusione
-      ansible.builtin.blockinfile:
-        path: /etc/security/access.conf
-        block: "{{ lookup('ansible.builtin.file', '/tmp/access_whitelist.txt') }}"
-        insertbefore: "^- : ALL : ALL"
-        marker: "# {mark} ANSIBLE MANAGED"
-        backup: yes
+      vim:
+        state: present
+      nano:
+        state: absent
+
+  tasks: 
+      - name: Installo pacchetti di sistema in base al dizionario di cui sopra 
+        ansible.builtin.dnf:
+          name: "{{ item.key }}"
+          state: "{{ item.value.state }}"
+        loop: "{{ pacchetti | dict2items }}"
