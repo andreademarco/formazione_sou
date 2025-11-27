@@ -54,5 +54,8 @@
 [**Esercizi Docker**]:
 - un _Dockerfile_ usato insieme alla pipeline _Jenkinsfile-date_build_ per definire l'immagine da buildare.
 
+[**Esercizi Container**]:
+- un _Vagrantfile_ utilizzato per configurare le due VM (docker host e nfs-server) usate per i tre esercizi.
+
 
 
