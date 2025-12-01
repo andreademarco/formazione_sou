@@ -1,0 +1,23 @@
+---
+- name: Stampa le variabili segrete dal Vault
+  hosts: localhost 
+  connection: local
+  gather_facts: false #disattiva raccolta facts (solo per ottimizzazione)
+
+  vars_files:
+    - secret.yml 
+
+  tasks:
+    - name: Stampa l'username del database
+      ansible.builtin.debug:
+        msg: "Lo username del database è: {{ db_username }}"
+
+    - name: Stampa la chiave API
+      ansible.builtin.debug:
+        msg: "La chiave API è: {{ api_key }}"
+
+    - name: Stampa la porta del server
+      ansible.builtin.debug:
+        msg: "La porta del server è: {{ server_port }}"
+#per runnare il playbook devo usare "ansible-playbook print_secrets.yml --ask-vault-pass"
+#in modo che Ansible possa decriptare secret.yml

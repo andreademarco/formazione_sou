@@ -1,0 +1,38 @@
+import java.time.LocalDate
+import java.time.format.TextStyle
+import java.util.Locale
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Build') {
+            steps {
+                script{
+                    def today = LocalDate.now()
+                    def todayday = today.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ITALIAN).toLowerCase()
+                    echo "Oggi è ${todayday}"
+
+                    def date_dict = ["lunedì": True, 
+                                     "martedì": True, 
+                                     "mercoledì": True, 
+                                     "giovedì": True, 
+                                     "venerdì": True, 
+                                     "sabato": False, 
+                                     "domenica": False]
+
+                    if (date_dict[todayday]) {
+                        echo "È un giorno lavorativo: purtroppo lavoro"
+                        sh 'docker build -t test-hello .'                       
+                    } else {
+                        echo "È un giorno festivo e salto la builf"
+                        currentBuild.result = 'SUCCESS'
+                        
+                        return
+                    }
+                } 
+            }
+
+        }
+    }
+}

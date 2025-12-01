@@ -1,0 +1,30 @@
+## Uso ansible.blockinfile per aggiungere blocco multilinea ad un file
+---
+
+- name: Settings con massimo numero di file variabile
+  hosts: all
+  become: yes
+  vars:
+    environment: production         #default
+    temp_output_file: /tmp/limits_output.txt   #temporaneo
+
+  tasks: 
+      - name: Installo pacchetti di sistema
+        ansible.builtin.dnf:
+          name: systemd
+          state: present
+          
+      - name: Prendo da template il numero di file max
+        ansible.builtin.template:
+          src: limits.conf.j2
+          dest: "{{ temp_output_file }}"
+        delegate_to: localhost     #il template lo trova nella host 
+
+      - name: Inserisco il blocco di configurazione in /etc/security/limits.conf
+        ansible.builtin.blockinfile:
+          path: /etc/security/limits.conf 
+          block: "{{ lookup('ansible.builtin.file', temp_output_file) }}" # Legge il contenuto del file temporaneo generato su localhost
+          insertafter: EOF
+          marker: "# {mark} Ansible Block - limiti"
+          create: yes  
+

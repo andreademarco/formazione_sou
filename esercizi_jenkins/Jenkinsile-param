@@ -1,0 +1,36 @@
+pipeline {
+    agent any
+//////////////////////////
+    parameters {
+        choice(
+            name: 'ENVIRONMENT',
+            choices: ['PRODUCTION', 'DEVELOPMENT'],
+            description: 'Scegli l\'ambiente di destinazione'
+        )
+    }
+//////////////////////////
+    environment {
+        TARGET_ENV = params.ENVIRONMENT
+    }
+//////////////////////////
+    stages {
+        ///////
+        stage('PRODUCTION') {
+            when {
+                expression { env.TARGET_ENV == 'PRODUCTION' }
+            }
+            steps {
+                echo "Siamo in production!"
+           } 
+        }
+        //////
+        stage('DEVELOPMENT') {
+            when {
+                expression { env.TARGET_ENV == 'DEVELOPMENT' }
+            }
+            steps {
+                echo "Andiamo in development, Beppe!"
+           } 
+        }
+     }
+}

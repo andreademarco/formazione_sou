@@ -1,0 +1,285 @@
+---
+- name: Install Docker and Ansible on Rocky Linux 9
+  hosts: all
+  become: true
+
+  vars: 
+    jenkins_agent_name: agent-01
+    jenkins_agent_image: jenkins/inbound-agent:latest
+    jenkins_master_ip: 10.10.1.5
+    jenkins_user: admin
+    jenkins_password: admin
+
+  tasks:
+    - name: 1. Ensure DNF is up to date
+      dnf:
+        name: "*"
+        state: latest
+
+    - name: 2. Install prerequisites
+      dnf:
+        name:
+          - dnf-plugins-core
+          - python3-pip
+          - jq
+        state: present
+
+    - name: 3. Add Docker CE repository
+      ansible.builtin.command: >
+        dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+      args:
+        creates: /etc/yum.repos.d/docker-ce.repo
+
+    - name: 4. Install Docker packages
+      dnf:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+        skip_broken: true
+
+    - name: 5. Enable and start Docker service
+      systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    - name: 6. Add user vagrant to docker group
+      user:
+        name: vagrant
+        groups: docker
+        append: yes
+
+    - name: 7. Install Python Docker SDK and Ansible
+      pip:
+        name:
+          - docker
+          - ansible
+        executable: pip3
+
+    - name: 8. Verify Docker installation
+      command: docker --version
+      register: docker_version
+      ignore_errors: true
+
+    - name: 9. Ensure Jenkins Docker network exists with a subnet
+      ansible.builtin.shell: >
+        docker network create 
+        --driver=bridge 
+        --subnet=10.10.1.0/24 
+        --gateway=10.10.1.1 
+        jenkins_net
+      register: jenkins_net_create
+      changed_when: jenkins_net_create.rc == 0
+      failed_when: jenkins_net_create.rc != 0 and "already exists" not in jenkins_net_create.stderr
+
+    - name: 10. Ensure Jenkins data volume exists
+      ansible.builtin.shell: docker volume create jenkins_home
+      register: volume_create_result
+      changed_when: volume_create_result.rc == 0
+      failed_when: volume_create_result.rc != 0 and "already exists" not in volume_create_result.stderr
+
+    - name: 11. Create Jenkins init script directory on host
+      ansible.builtin.file:
+        path: /tmp/jenkins_init
+        state: directory
+        mode: '0755'
+
+    - name: 12. Create default admin user via Groovy script
+      ansible.builtin.copy:
+        dest: /tmp/jenkins_init/basic-security.groovy
+        mode: '0644'
+        content: |
+          import jenkins.model.*
+          import hudson.security.*
+
+          def instance = Jenkins.getInstance()
+
+          println "--> Creating admin user"
+
+          def hudsonRealm = new HudsonPrivateSecurityRealm(false)
+          hudsonRealm.createAccount("admin", "admin")
+          instance.setSecurityRealm(hudsonRealm)
+
+          def strategy = new FullControlOnceLoggedInAuthorizationStrategy()
+          strategy.setAllowAnonymousRead(false)
+          instance.setAuthorizationStrategy(strategy)
+
+          instance.save()
+
+    - name: 13. Remove existing Jenkins Master container if exists
+      ansible.builtin.shell: docker rm -f jenkins-master || true
+      ignore_errors: true
+
+    - name: 14. Run Jenkins Master container
+      ansible.builtin.shell: |
+        docker run -d \
+          --name jenkins-master \
+          --restart unless-stopped \
+          -p 8085:8080 \
+          -p 50005:50000 \
+          -v jenkins_home:/var/jenkins_home \
+          -v /tmp/jenkins_init:/var/jenkins_home/init.groovy.d \
+          --network jenkins_net \
+          --ip {{ jenkins_master_ip }} \
+          -e JAVA_OPTS="-Djenkins.install.runSetupWizard=false" \
+          jenkins/jenkins:lts-jdk17
+
+    - name: 15. Wait for Jenkins Master to start
+      ansible.builtin.uri:
+        url: "http://{{ jenkins_master_ip }}:8080/api/json"
+        method: GET
+        status_code: [200, 403, 401]
+        follow_redirects: all
+        validate_certs: false
+        timeout: 10
+      register: jenkins_ready
+      until: jenkins_ready.status is defined and jenkins_ready.status in [200, 403, 401]
+      retries: 30
+      delay: 10
+
+    - name: 16. Wait for Jenkins to fully initialize
+      ansible.builtin.pause:
+        seconds: 60
+
+    ###########################################################################################################
+    ### CREAZIONE TOKEN API TRAMITE REST API 
+    ###########################################################################################################
+
+    - name: 17. Get Jenkins crumb (CSRF protection) and save cookies
+      ansible.builtin.shell: |
+        curl -c /tmp/jenkins_cookies.txt \
+             -u {{ jenkins_user }}:{{ jenkins_password }} \
+             -s "http://{{ jenkins_master_ip }}:8080/crumbIssuer/api/json" \
+             | jq -r '.crumb'
+      register: jenkins_crumb_result
+      retries: 5
+      delay: 10
+      until: jenkins_crumb_result.rc == 0 and jenkins_crumb_result.stdout != ""
+
+    - name: 18. Set crumb as fact
+      ansible.builtin.set_fact:
+        jenkins_crumb: "{{ jenkins_crumb_result.stdout }}"
+
+    - name: 19. Generate API Token via REST API
+      ansible.builtin.shell: |
+        curl -b /tmp/jenkins_cookies.txt \
+             -u {{ jenkins_user }}:{{ jenkins_password }} \
+             -H "Jenkins-Crumb: {{ jenkins_crumb }}" \
+             -X POST \
+             -d "newTokenName=ansible-api-token" \
+             -s "http://{{ jenkins_master_ip }}:8080/me/descriptorByName/jenkins.security.ApiTokenProperty/generateNewToken" \
+             | jq -r '.data.tokenValue'
+      register: api_token_result
+      retries: 3
+      delay: 5
+      until: api_token_result.rc == 0 and api_token_result.stdout != ""
+
+    - name: 20. Set API Token as fact
+      ansible.builtin.set_fact:
+        jenkins_api_token: "{{ api_token_result.stdout }}"
+
+    - debug:
+        msg: "Jenkins API Token generato: {{ jenkins_api_token }}"
+
+    ###########################################################################################################
+    ### CREAZIONE AGENT NODE TRAMITE REST API
+    ###########################################################################################################
+
+    - name: 21. Delete existing agent node if present (cleanup)
+      ansible.builtin.uri:
+        url: "http://{{ jenkins_master_ip }}:8080/computer/{{ jenkins_agent_name }}/doDelete"
+        method: POST
+        user: "{{ jenkins_user }}"
+        password: "{{ jenkins_api_token }}"
+        force_basic_auth: true
+        status_code: [200, 302, 404, 400]
+      ignore_errors: true
+
+    - name: 22. Create Jenkins Agent Node via REST API (JSON payload)
+      ansible.builtin.shell: |
+        curl -b /tmp/jenkins_cookies.txt \
+             -u {{ jenkins_user }}:{{ jenkins_api_token }} \
+             -H "Jenkins-Crumb: {{ jenkins_crumb }}" \
+             -H "Content-Type: application/x-www-form-urlencoded" \
+             -X POST \
+             --data-urlencode "json={\"name\": \"{{ jenkins_agent_name }}\", \"nodeDescription\": \"Agent gestito da Ansible\", \"numExecutors\": \"1\", \"remoteFS\": \"/home/jenkins/agent\", \"labelString\": \"\", \"mode\": \"EXCLUSIVE\", \"type\": \"hudson.slaves.DumbSlave\", \"retentionStrategy\": {\"stapler-class\": \"hudson.slaves.RetentionStrategy\$Always\"}, \"nodeProperties\": {\"stapler-class-bag\": \"true\"}, \"launcher\": {\"stapler-class\": \"hudson.slaves.JNLPLauncher\"}}" \
+             "http://{{ jenkins_master_ip }}:8080/computer/doCreateItem?name={{ jenkins_agent_name }}&type=hudson.slaves.DumbSlave"
+      register: agent_creation
+      retries: 3
+      delay: 5
+
+    - name: 23. Wait for agent node to be created
+      ansible.builtin.pause:
+        seconds: 10
+
+    - name: 24. Retrieve the Agent Secret from JNLP file
+      ansible.builtin.shell: |
+        curl -b /tmp/jenkins_cookies.txt \
+             -u {{ jenkins_user }}:{{ jenkins_api_token }} \
+             -s "http://{{ jenkins_master_ip }}:8080/computer/{{ jenkins_agent_name }}/jenkins-agent.jnlp" \
+             | grep -oP '<argument>\K[a-f0-9]{32,}(?=</argument>)' | head -1
+      register: agent_secret_result
+      retries: 10
+      delay: 10
+      until: agent_secret_result.rc == 0 and agent_secret_result.stdout != ""
+
+    - name: 25. Set Agent Secret as fact
+      ansible.builtin.set_fact:
+        jenkins_agent_secret: "{{ agent_secret_result.stdout }}"
+
+    - debug:
+        msg: "Agent Secret: {{ jenkins_agent_secret }}"
+
+    - name: 26. Pull Jenkins Agent Docker Image
+      ansible.builtin.shell: docker pull {{ jenkins_agent_image }}
+      register: pull_result
+      changed_when: "'Downloaded newer image' in pull_result.stdout or 'Pulling from' in pull_result.stdout"
+
+    - name: 27. Remove existing Jenkins Agent container if present
+      ansible.builtin.shell: docker rm -f {{ jenkins_agent_name }} || true
+      ignore_errors: true
+
+    - name: 28. Run Jenkins Agent container
+      ansible.builtin.shell: |
+        docker run -d \
+          --name {{ jenkins_agent_name }} \
+          --restart unless-stopped \
+          --network jenkins_net \
+          -e JENKINS_URL="http://{{ jenkins_master_ip }}:8080/" \
+          -e JENKINS_AGENT_NAME="{{ jenkins_agent_name }}" \
+          -e JENKINS_SECRET="{{ jenkins_agent_secret }}" \
+          {{ jenkins_agent_image }} \
+          -url http://{{ jenkins_master_ip }}:8080/ \
+          -secret {{ jenkins_agent_secret }} \
+          -name {{ jenkins_agent_name }} \
+          -workDir /home/jenkins/agent
+      register: agent_container
+
+    - name: 29. Wait for agent container to start
+      ansible.builtin.pause:
+        seconds: 10
+
+    - name: 30. Verify Agent Connection
+      ansible.builtin.uri:
+        url: "http://{{ jenkins_master_ip }}:8080/computer/{{ jenkins_agent_name }}/api/json"
+        method: GET
+        user: "{{ jenkins_user }}"
+        password: "{{ jenkins_api_token }}"
+        force_basic_auth: true
+        return_content: true
+      register: agent_status
+      retries: 10
+      delay: 10
+      until: agent_status.status == 200
+
+    - name: 31. Check agent logs for debugging
+      ansible.builtin.shell: docker logs {{ jenkins_agent_name }} --tail 20
+      register: agent_logs
+
+    - debug:
+        msg: "{{ agent_logs.stdout_lines }}"
+
+    - debug:
+        msg: "Setup completato! Jenkins Master disponibile su http://{{ jenkins_master_ip }}:8080"

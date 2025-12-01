@@ -1,0 +1,22 @@
+---
+- name: Gestione pacchetti con dizionario
+  hosts: all
+  become: yes
+
+  vars:
+    pacchetti:
+      systemd:
+        state: present
+      python3:
+        state: present
+      vim:
+        state: present
+      nano:
+        state: absent
+
+  tasks: 
+      - name: Installo pacchetti di sistema in base al dizionario di cui sopra 
+        ansible.builtin.dnf:
+          name: "{{ item.key }}"
+          state: "{{ item.value.state }}"
+        loop: "{{ pacchetti | dict2items }}"

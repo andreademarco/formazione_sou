@@ -1,0 +1,11 @@
+# Ignora le cartelle venv ovunque si trovino (in tutte le sottocartelle)
+.venv/
+*/.venv/
+**/.venv/
+
+# Ignora file temporanei ovunque
+__pycache__/
+*.pyc
+.DS_Store
+*.ipynb_checkpoints
+.vagrant/

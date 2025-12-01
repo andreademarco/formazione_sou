@@ -1,0 +1,27 @@
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64" # Ubuntu 22.04 LTS
+
+  # VM 1: NFS Server (Network File System) - lui è l'esportatore della directory
+  config.vm.define "nfs-server" do |server| #esporta
+    server.vm.hostname = "nfs-server"
+    server.vm.network "private_network", ip: "192.168.56.10"
+    server.vm.provider "virtualbox" do |vb|
+      vb.memory = "1024"
+    end
+  end
+
+  # VM 2: Docker Host - lui ospita docker e fa girare i container (dentro al quale verrà montata la directory)
+  config.vm.define "docker-host" do |client| #monta
+    client.vm.hostname = "docker-host"
+    client.vm.network "private_network", ip: "192.168.56.20" #stessa subnet
+    client.vm.provision "shell", inline: <<-SHELL  #scarica le dipendenze e docker poi aggiunge vagrant al gruppo docker
+      curl -fsSL https://get.docker.com -o get-docker.sh
+      sh get-docker.sh
+      usermod -aG docker vagrant  
+      apt-get update && apt-get install -y nfs-common docker-compose-plugin
+    SHELL
+    client.vm.provider "virtualbox" do |vb|
+      vb.memory = "2048"
+    end
+  end
+end
