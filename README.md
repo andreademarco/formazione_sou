@@ -57,5 +57,8 @@
 [**Esercizi Container**]:
 - un _Vagrantfile_ utilizzato per configurare le due VM (docker host e nfs-server) usate per i tre esercizi.
 
+[**track_pi_greco**]: 
+- implementa un mini-chatbot in Python che attinge alle informazioni della pagina di Wikipedia sulla Pizza Napoletana.
+
 
 
