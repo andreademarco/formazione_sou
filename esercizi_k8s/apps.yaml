@@ -1,0 +1,66 @@
+# apps.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eng-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eng
+  template:
+    metadata:
+      labels:
+        app: eng
+    spec:
+      containers:
+      - name: echo
+        image: hashicorp/http-echo
+        args:
+        - "-text=Hello World"
+        ports:
+        - containerPort: 5678
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: eng-service
+spec:
+  selector:
+    app: eng
+  ports:
+    - port: 80
+      targetPort: 5678
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ita-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ita
+  template:
+    metadata:
+      labels:
+        app: ita
+    spec:
+      containers:
+      - name: echo
+        image: hashicorp/http-echo
+        args:
+        - "-text=Ciao Mondo"
+        ports:
+        - containerPort: 5678
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ita-service
+spec:
+  selector:
+    app: ita
+  ports:
+    - port: 80
+      targetPort: 5678

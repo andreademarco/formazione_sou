@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nfs-pod-pvc
+spec:
+  containers:
+  - name: web-server
+    image: nginx
+    volumeMounts:
+    - mountPath: "/usr/share/nginx/html"
+      name: storage-nfs
+  volumes:
+  - name: storage-nfs
+    persistentVolumeClaim:
+      claimName: mio-nfs-pvc  

@@ -1,0 +1,32 @@
+# 1. IL PERSISTENT VOLUME (L'oggetto fisico)
+# il "pezzo di disco" disponibile sul server NFS.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mio-nfs-pv
+spec:
+  capacity:
+    storage: 1Gi              
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany           # NFS permette a tanti nodi di leggere/scrivere insieme
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""        
+  nfs:
+    server: 192.168.56.10     
+    path: "/srv/nfs/cond"     
+
+---
+# 2. IL PERSISTENT VOLUME CLAIM (La richiesta)
+#il "biglietto" che il Pod userà per reclamare lo spazio sopra.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mio-nfs-pvc           #Nome della richiesta
+spec:
+  accessModes:
+    - ReadWriteMany           #Deve coincidere col PV
+  storageClassName: ""        #Deve coincidere col PV
+  resources:
+    requests:
+      storage: 1Gi            

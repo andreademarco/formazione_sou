@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nfs-pod-direct
+spec:
+  containers:
+  - name: web-server
+    image: nginx
+    volumeMounts:
+      # Dove montare il volume dentro il container
+    - mountPath: "/usr/share/nginx/html"
+      name: nfs-volume
+  volumes:
+  - name: nfs-volume
+    nfs:
+      server: 192.168.56.10 
+      path: "/srv/nfs/cond"

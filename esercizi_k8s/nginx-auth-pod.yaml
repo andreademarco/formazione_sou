@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-auth-pod
+spec:
+  containers:
+  - name: nginx-auth-container
+    image: nginx:latest
+    ports:
+    - containerPort: 80
+    
+    volumeMounts:
+    #Monta la ConfigMap per la configurazione Nginx
+    - name: nginx-config-volume
+      mountPath: /etc/nginx/conf.d/default.conf
+      subPath: default.conf
+      
+    #Monta il Secret (file .htpasswd)
+    - name: auth-secret-volume
+      #il percorso /etc/nginx/secrets deve corrispondere a 'auth_basic_user_file'
+      mountPath: /etc/nginx/secrets
+      readOnly: true
+      
+  volumes:
+  #Definizione del Volume per la ConfigMap
+  - name: nginx-config-volume
+    configMap:
+      name: nginx-config
+      items:
+      #Mappa la chiave 'default.conf' della ConfigMap in un file chiamato 'default.conf' nel mountPath
+      - key: default.conf
+        path: default.conf
+        
+  #Definizione del Volume per il Secret
+  - name: auth-secret-volume
+    secret:
+      secretName: nginx-auth-secret

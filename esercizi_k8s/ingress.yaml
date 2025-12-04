@@ -1,0 +1,23 @@
+# ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: language-ingress
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /eng
+        pathType: Exact   #non /eng/
+        backend:
+          service:
+            name: eng-service
+            port:
+              number: 80
+      - path: /ita
+        pathType: Exact   #non /ita/
+        backend:
+          service:
+            name: ita-service
+            port:
+              number: 80
