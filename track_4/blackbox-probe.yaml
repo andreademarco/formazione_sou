@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: check-google
+  namespace: monitoring
+  labels:
+    release: my-kube-prom #deve matchare la label che Prometheus sta guardando
+spec:
+  jobName: http-google-check
+  prober:
+    url: my-blackbox-prometheus-blackbox-exporter.monitoring.svc:9115 #indirizzo interno del servizio installato al punto A
+  module: http_2xx #modulo standard: successo se codice 2xx
+  targets:
+    staticConfig:
+      static:
+        - http://www.google.com
+        - https://kubernetes.io
+  interval: 15s
