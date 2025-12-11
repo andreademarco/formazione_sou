@@ -1,18 +1,19 @@
 apiVersion: monitoring.coreos.com/v1
-kind: Probe
+kind: Probe           #è una Custom Resource Definition
 metadata:
   name: check-google
   namespace: monitoring
   labels:
-    release: my-kube-prom #deve matchare la label che Prometheus sta guardando
+    release: my-kube-prom #deve corrispondere al nome della release helm installata
 spec:
-  jobName: http-google-check
+  jobName: http-google-check 
   prober:
-    url: my-blackbox-prometheus-blackbox-exporter.monitoring.svc:9115 #indirizzo interno del servizio installato al punto A
+    url: my-blackbox-prometheus-blackbox-exporter.monitoring.svc:9115 #indirizzo interno del servizio installato 
   module: http_2xx #modulo standard: successo se codice 2xx
   targets:
     staticConfig:
       static:
-        - http://www.google.com
+        - http://www.google.com     #placeholder
         - https://kubernetes.io
-  interval: 15s
+        - http://mio-nginx-interno.default.svc
+  interval: 15s        
