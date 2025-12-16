@@ -1,0 +1,111 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-app-deployment
+  labels:
+    environment: dev
+    app: web
+    region: EU
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web
+      environment: dev
+  template:
+    metadata:
+      labels:
+        app: web
+        environment: dev
+        region: EU
+    spec:
+      containers:
+      - name: web-app
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-app-service
+  labels:
+    environment: dev
+    app: web
+    region: EU
+spec:
+  type: LoadBalancer
+  selector:
+    app: web
+    environment: dev
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: web-app-replicaset
+  labels:
+    environment: dev
+    app: web
+    region: EU
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web
+      environment: dev
+  template:
+    metadata:
+      labels:
+        app: web
+        environment: dev
+        region: EU
+    spec:
+      containers:
+      - name: web-app
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web-app-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: webapp.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: web-app-service
+            port:
+              number: 80
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: logging-daemon
+  labels:
+    app: logging
+spec:
+  selector:
+    matchLabels:
+      app: logging
+  template:
+    metadata:
+      labels:
+        app: logging
+    spec:
+      containers:
+      - name: fluentd
+        image: busybox
+        args: [/bin/sh, -c, 'while true; do echo "Logging..."; sleep 10; done']
