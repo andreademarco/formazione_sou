@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  colore-sfondo: "blu" #per cambiare colore devo cancellare il pod!
+  livello-log: "debug"

@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-lettore
+spec:
+  containers:
+  - name: nginx
+    image: nginx:alpine
+
+    #Posso farlo in due modi:
+    # 1-iniettando ConfigMap come variabili d'ambiente
+    env:
+      - name: COLORE_APP        #nome della variabile dentro il container
+        valueFrom:
+          configMapKeyRef:
+            name: app-config    #nome della ConfigMap (mia-config.yaml)
+            key: colore-sfondo  #chiave dentro la ConfigMap
+
+    # 2-montare secret come File
+    volumeMounts:
+      - name: volume-segreto
+        mountPath: "/etc/credenziali" 
+        readOnly: true
+  
+  volumes:
+  - name: volume-segreto
+    secret:
+      secretName: credenziali-db #nome del secret (mio-secret.yaml)
