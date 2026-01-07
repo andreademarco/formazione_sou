@@ -63,5 +63,9 @@
 [**track_pi_greco**]: 
 - implementa un mini-chatbot in Python che attinge alle informazioni della pagina di Wikipedia sulla Pizza Napoletana.
 
+[**Esercizio Contadino**]:
+- lo script che implementa l'indovinello "Lupo, Capra e Cavoli" utilizzando due container per le rive e dei processi "killabili" per i personaggi.
 
+[**track_4**]:
+- 
 
