@@ -1,0 +1,26 @@
+region: eu-west-1
+period_seconds: 60
+range_seconds: 600
+delay_seconds: 60
+
+metrics:
+ 
+ - aws_namespace: AWS/AppRunner
+   aws_metric_name: CPUUtilization
+   aws_dimensions: [ServiceName, ServiceID]  #D
+   aws_statistics: [Average]
+
+ - aws_namespace: AWS/AppRunner
+   aws_metric_name: CPUUtilization
+   aws_dimensions: [Instance, ServiceName]
+   aws_statistics: [Average]
+
+ - aws_namespace: AWS/AppRunner
+   aws_metric_name: Requests
+   aws_dimensions: [ServiceName, ServiceID]
+   aws_statistics: [Sum]
+  
+ - aws_namespace: AWS/AppRunner
+   aws_metric_name: ActiveInstances
+   aws_dimensions: [ServiceName, ServiceID]
+   aws_statistics: [Maximum] # O Average
