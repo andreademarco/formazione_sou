@@ -26,6 +26,18 @@
 ├── track_pi_greco/
 │   ├── mini-chatbot.ipynb
 │
+├── esercizio_capra_cavoli/
+│   ├── game.sh
+│
+├── track_4/
+│   ├── ...
+│
+├── esercizio_monitoring_aws/
+│   ├── docker-compose.yml
+│   ├── cloudwatch_config.yml
+│   └── prometheus.yml
+│
+│
 └── README.md
 ```
 --- 
@@ -67,5 +79,9 @@
 - lo script che implementa l'indovinello "Lupo, Capra e Cavoli" utilizzando due container per le rive e dei processi "killabili" per i personaggi.
 
 [**track_4**]:
-- 
+- files scritti per lo svolgimento della track 4 sul Supporto Openshift 1° Livello.
 
+[**Esercizio Monitoring AWS**]:
+- il file _docker-compose.yml_ che definisce i servizi Exporter, Prometheus e Graphana;
+- il file _cloudwatch_config.yml_ che configura il tipo di richieste;
+- il file _prometheus.yml_ che configura prometheus.
