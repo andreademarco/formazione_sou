@@ -19,12 +19,19 @@ La logica di KubeVirt è dichiarativa, cioè modificando la specifica della VM (
 - Per i dischi, il controller che fa da intermediario tra i dischi e il guest deve essere di tipo SCSI (`virtio-scsi`). Questo controller non è progettato per essere accoppiato ad un disco (1 controller = 1 disco), bensì ci possono essere multiple unità su un singolo controller.
 - **FeatureGates** necessarie (funzionalità specifiche che possono essere abilitate nella Custom Resource KubeVirt) sono `DeclarativeHotplugVolumes` (equivalente obsoleto: `HotplugVolumes`) o `WorkloadUpdateMethods`. Il primo abilita il disk hotplug, il secondo permette al virt-operator di gestire gli aggiornamenti delle VMIs. C'è anche il featuregate `ExpandDisks`.
 
+* **Configurazione Kernel Guest:** Per far sì che il sistema operativo all'interno della VM (Guest) sia in grado di recepire gli eventi ACPI, il suo kernel deve essere stato compilato con il supporto specifico per l'hotplug. Nello specifico, il kernel Linux guest richiede queste stringhe di configurazione nel suo `.config`:
+  * Per la CPU: `CONFIG_HOTPLUG_CPU=y` (flag che abilita il sottosistema* generico di CPU hotplu nel kernel) e `CONFIG_ACPI_HOTPLUG_CPU=y` (permette di ascoltare gli eventi ACPI).
+  * Per la RAM: `CONFIG_MEMORY_HOTPLUG=y` (flag che abilita il sottosistema che permette al kernel di aggiungere nuove pagine di memoria al proprio allocatore in maniera hotplug), `CONFIG_MEMORY_HOTREMOVE=y` (estende il precedente aggiungendo la possibilità di rimuovere invece che di aggiungere, è necessario per gestione dinamica) e `CONFIG_ACPI_HOTPLUG_MEMORY=y` (come sopra ma per l’evento “Memory Hotplug”).
+*sottosistema = modulo funzionale separato dagli altri. Il kernel è organizzato in questi moduli o, appunto, sottosistemi.
+
+
 ## Componenti
 
 - **QEMU** (Quick Emulator) - Software che esegue la VM emulando l'hardware: crea la CPU virtuale, la RAM virtuale, i controller dei dischi e le schede di rete. In KubeVirt ogni VM è un processo QEMU che gira all'interno di un container su un nodo k8s.
 - **Libvirt** - Demone che gestisce la virtualizzazione. Riceve comandi ad alto livello e li traduce per QEMU.
 - **QMP** (QEMU Monitor Protocol) - È un protocollo basato su JSON che permette ad applicazioni esterne (come Libvirt) di comunicare con un'istanza QEMU in esecuzione.
 - **ACPI** (Advanced Configuration and Power Interface) - Standard industriale che permette al sistema operativo di comunicare con l'hardware per la gestione dell'energia e la configurazione (1996).
+- **KVM** (Kernel-based Virtual Machine) - Modulo del kernel Linux (host) che permette a QEMU di bypassare l'emulazione software e far eseguire le istruzioni CPU e di memoria della VM direttamente sull'hardware fisico (sfruttando le estensioni hardware Intel VT-x o AMD-V). È KVM a rendere le performance di KubeVirt paragonabili a quelle di hypervisor bare-metal, altrimenti se  QEMU si limitasse a emulare ogni istruzione via software, la VM sarebbe lentisisma.
 
 ## Procedure
 
@@ -136,3 +143,11 @@ Per assegnare le risorse in VMware, vCenter dice a ESXi di dare più memoria fis
 2. QEMU nel pod dà quelle risorse alla VM guest.
 
 In VMware il CPU/RAM hot add va abilitato prima dell'avvio della VM, esattamente come il `maxSockets` di KubeVirt. L'aggiunta di un disco a caldo avviene collegando un VMDK tramite vCenter, che è l'analogo del PVC in KubeVirt.
+
+**Due Strati del Kernel**: In un container normale su k8s c’è un solo kernel, quello dell’host condiviso da tutti i container del nodo: un container usa il kernel del sistema operativo sottostante isolato tramite namespace e cgroups. 
+
+In KubeVirt invece QEMU emula un’intera macchina fisica, quindi dentro quella macchina gira un os completo con il proprio kernel separato. *Come risultato si hanno due kernel sovrapposti attivi contemporanemante sullo stesso hardware fisico*.
+
+PRO: <u>isolamento della VM</u> (un problema nel kernel guest non influenza il nodo host e tutti gli altri pods, mentre in un container un bug nel kernel può influenzare tutti i container del nodo), <u>flessibilità</u> (qualsiasi sistema operativo su un nodo worker perché il guest no nsa nulla dell’host sottostante).
+
+CONTRO: <u>double scheduling per la CPU</u> (lo scheduler del kernel decide quali processi girare su core fisici; ogni decisione viene quindi presa due volte, aggiungendo latenza), <u>double caching per la RAM</u> (gli stessi dati occupano RAM due volte, sia nel guest che nell’host. Si può disabilitare ma con configurazione specifica.), <u>overhead I/O</u> (quando un processo nella VM vuole fare I/O, l’operazione deve completare il percorso dentro il guest, poi uscire dalla VM e ricominciare sull’host).
